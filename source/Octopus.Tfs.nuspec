@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Octopus.Tfs</id>
+    <version>0.1</version>
+    <authors>ducas</authors>
+    <owners>ducas</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Octopus TFS is used for packaging projects and creating releases when using Team Foundation Build service. This ties OctopusTools and OctoPack together into a nice package to allow you to automate the process of creating releases in Octopus Deploy without modifying the build process template.</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>automation deployment</tags>
+    <dependencies>
+      <dependency id="OctopusTools" version="2.5.2.25" />
+      <dependency id="OctoPack" version="3.0.31" />
+    </dependencies>
+  </metadata>
+</package>

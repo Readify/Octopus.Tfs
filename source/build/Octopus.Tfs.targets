@@ -1,0 +1,6 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Ensure that the Variables.targets file is loaded to get/set appropriate OctoPack variables. -->
+  <Import Project="$(SolutionDir)\.deploy\Variables.targets" />
+
+</Project>

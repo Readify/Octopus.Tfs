@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ 
+  <Target Name="TeamBuildNumber">
+ 
+    <GetTeamBuildNumber TeamFoundationServerUrl="$(TeamFoundationServerUrl)" BuildUri="$(BuildUri)" ContinueOnError="true">
+      <Output TaskParameter="TeamBuildNumber" PropertyName="TF_BUILD_BUILDNUMBER" />
+    </GetTeamBuildNumber>
+    
+  </Target>
+  
+  <PropertyGroup>
+    <TeamFoundationApiVersion>11.0.0.0</TeamFoundationApiVersion><!-- 11 = TFS 2012 -->
+  </PropertyGroup>
+ 
+  <UsingTask TaskName="GetTeamBuildNumber" 
+             TaskFactory="CodeTaskFactory" 
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v$(MSBuildToolsVersion).dll">
+    <ParameterGroup>
+      <TeamFoundationServerUrl ParameterType="System.String" Required="true" />
+      <BuildUri ParameterType="System.String" Required="true" />
+      <TeamBuildNumber ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="Microsoft.TeamFoundation.Client, Version=$(TeamFoundationApiVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+      <Reference Include="Microsoft.TeamFoundation.Build.Client, Version=$(TeamFoundationApiVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+      <Using Namespace="Microsoft.TeamFoundation.Client" />
+      <Using Namespace="Microsoft.TeamFoundation.Build.Client" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+TeamBuildNumber = "";
+if (string.IsNullOrEmpty(TeamFoundationServerUrl) || string.IsNullOrEmpty(BuildUri)) {
+  Log.LogMessage("TeamFoundationServerUrl or BuildUri not specified.");
+  return false;
+}
+var collection = TfsTeamProjectCollectionFactory.GetTeamProjectCollection(new Uri(TeamFoundationServerUrl));  
+var buildServer = collection.GetService<IBuildServer>();  
+var buildDetail = buildServer.GetBuild(new Uri(BuildUri));
+TeamBuildNumber = buildDetail.BuildNumber;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+ 
+</Project>

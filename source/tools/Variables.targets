@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Import targets for getting the build number from TFS -->
+  <Import Project="TeamBuildNumber.targets" />
+
+  <!-- Provide an injection point for custom deployment targets and variables -->
+  <Import Condition="Exists('Custom.targets')" Project="Custom.targets" />
+
+  <PropertyGroup>
+
+    <!-- If CreateRelease is not specified, use false (simplifies conditions). -->
+    <CreateRelease Condition="'$(CreateRelease)' == ''">false</CreateRelease>
+
+    <!-- Use the BuildDependsOn property to ensure GetVersionNumber and EnsureOctoVariablesSet are executed when running as part of a project compile. -->
+    <BuildDependsOn>
+      GetVersionNumber;
+      EnsureOctoVariablesSet;
+      $(BuildDependsOn);
+    </BuildDependsOn>
+
+  </PropertyGroup>
+
+  <!--
+    Gets the build number from TFS and uses it for the VersionNumber if not specified as an argument.
+    Also calls FixReleaseNumber to version number is SemVer.
+  -->
+  <Target Condition="$(CreateRelease)" Name="GetVersionNumber" BeforeTargets="Build">
+
+    <GetTeamBuildNumber Condition="'$(TeamFoundationServerUrl)' != '' And '$(VersionNumber)' == ''" TeamFoundationServerUrl="$(TeamFoundationServerUrl)" BuildUri="$(BuildUri)" ContinueOnError="true">
+      <Output TaskParameter="TeamBuildNumber" PropertyName="VersionNumber" />
+    </GetTeamBuildNumber>
+
+    <FixReleaseNumber ReleaseNumber="$(VersionNumber)" Condition="'$(VersionNumber)' != ''">
+      <Output TaskParameter="FixedReleaseNumber" PropertyName="VersionNumber" />
+    </FixReleaseNumber>
+
+    <Message Text="VersionNumber is '$(VersionNumber)'" />
+    
+  </Target>
+
+  <!--
+    Sets the variables used by OctoPack based on the base values specified.
+  -->
+  <Target Condition="$(CreateRelease)" Name="EnsureOctoVariablesSet">
+    <PropertyGroup>
+      <RunOctoPack Condition="$(CreateRelease)">true</RunOctoPack>
+      <OctoPackPublishPackageToHttp Condition="$(CreateRelease) And '$(OctoPackPublishPackageToHttp)' == ''">$(OctopusServerUrl)/nuget/packages</OctoPackPublishPackageToHttp>
+      <OctoPackPublishApiKey Condition="$(CreateRelease) And '$(OctoPackPublishApiKey)' == ''">$(OctopusServerApiKey)</OctoPackPublishApiKey>
+      <OctoPackPackageVersion Condition="$(CreateRelease) And '$(OctoPackPackageVersion)' == ''">$(VersionNumber)</OctoPackPackageVersion>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+    Determines whether a build/version number is a SemVer number with a '.' before the pre-release revision number and removes the '.'.
+    This is required because the TFS build definition needs a '.' before the revision number to be able to generate the number correctly.
+    E.g. 1.0.0-rc$(Rev:.r) will produce 1.0.0-rc.1, which cause things to go very wrong when creating packages and releases.
+    Examples:
+      1.0.0 => 1.0.0
+      1.0.0-rc.1 => 1.0.0-rc1
+      1.0.0-beta.1 => 1.0.0-beta1
+      2014_CIBuild.5 => 2014_CIBuild.5  // Ignored
+  -->
+  <UsingTask TaskName="FixReleaseNumber"
+             TaskFactory="CodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v$(MSBuildToolsVersion).dll">
+    <ParameterGroup>
+      <ReleaseNumber ParameterType="System.String" Required="true" />
+      <FixedReleaseNumber ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+FixedReleaseNumber = ReleaseNumber;
+if (Regex.IsMatch(ReleaseNumber, @"^(\d+.){2}\d+(-\w+\.\d+){1}$")) {
+  FixedReleaseNumber = ReleaseNumber.Remove(ReleaseNumber.LastIndexOf('.'), 1);
+  Log.LogMessage("Removing last '.' from VersionNumber to ensure package and release created successfully - " + FixedReleaseNumber);
+}
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+</Project>

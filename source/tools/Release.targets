@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+    Use NuGet to perform a package restore on the solution before the solution starts to build.
+    This will restore all solution and project level packages, meaning OctoPack will be available when it is run after a project is compiled.
+  -->    
+  <Target Name="RestoreSolutionPackages" BeforeTargets="Build">
+
+    <PropertyGroup>
+      <NuGetToolsPath>$(SolutionDir).nuget</NuGetToolsPath>
+      <SolutionRestoreCommand>"$(NugetToolsPath)\nuget.exe" restore $(SolutionDir)$(SolutionName).sln</SolutionRestoreCommand>
+    </PropertyGroup>
+
+    <Exec Command="$(SolutionRestoreCommand)" />
+
+  </Target>
+
+  <!--
+    Import the targets and properties responsible for getting/settings variables that are depended upon by OctoPack and Octo.exe.
+  -->    
+  <Import Project="Variables.targets" />
+
+  <!--
+    Ensure that all variables that are depended upon by OctoPack and Octo.exe have been set so that we know they will be executed successfully.
+    This target will run after all NuGet packages are restored (to ensure Octo.exe exists) and will invoke GetVersionNumber before it executes
+    to get the VersionNumber property from TFS (if it is not specified on the command line) and ensure it is formatted correctly.
+  -->
+  <Target Name="EnsureDeploymentVariablesSet" Condition="$(CreateRelease)" AfterTargets="RestoreSolutionPackages" DependsOnTargets="GetVersionNumber">
+
+    <!-- Get a list of all the Octo.exe's in the packages folder and filter it down to the last one. -->
+
+    <ItemGroup>
+      <AllOctopusToolsPaths Include="packages\OctopusTools*\Octo.exe" />
+    </ItemGroup>
+    <PropertyGroup>
+      <OctopusToolsPath></OctopusToolsPath>
+    </PropertyGroup>
+
+    <FindInList List="@(AllOctopusToolsPaths)" ItemSpecToFind="%(AllOctopusToolsPaths.Identity)" FindLastMatch="true" >
+      <Output TaskParameter="ItemFound" PropertyName="OctopusToolsPath" />
+    </FindInList>
+
+    <!-- Raise an error if anything is missing -->
+
+    <Error Condition="'$(OctopusToolsPath)' == ''" Text="Can't find OctopusTools package. Ensure it is installed." />
+    <Error Condition="'$(VersionNumber)' == ''" Text="The version number has not been set. Either run this from a build server (PLEASE!) or specify the VersionNumber property as an MSBuild argument." />
+    <Error Condition="'$(OctopusServerUrl)' == ''" Text="The Octopus Server URL has not been set. Specify the OctopusServerUrl property as an MSBuild argument or add it to .deploy\Custom.targets." />
+    <Error Condition="'$(OctopusServerApiKey)' == ''" Text="The Octopus Server API Key has not been set. Specify the OctopusServerApiKey property as an MSBuild argument .deploy\Custom.targets." />
+    <Error Condition="'$(DeploymentProjectName)' == ''" Text="The project name has not been set. Specify the DeploymentProjectName property as an MSBuild argument .deploy\Custom.targets." />
+    
+  </Target>
+
+  <!--
+    Use Octo.exe to create a release in Octopus Server with the VersionNumber and DeploymentProjectName specified.
+  -->
+  <Target Name="CreateRelease" Condition="$(CreateRelease)" AfterTargets="Build">
+    <PropertyGroup>
+      <CreateReleaseCommand>"$(OctopusToolsPath)" create-release --server=$(OctopusServerUrl) --project="$(DeploymentProjectName)" --apikey=$(OctopusServerApiKey) --version=$(VersionNumber) --packageversion=$(VersionNumber)</CreateReleaseCommand>
+    </PropertyGroup>
+
+    <Message Text="Create release: $(DeploymentProjectName) v$(VersionNumber)" Importance="Normal" />
+    <Exec Command="$(CreateReleaseCommand)" />
+
+  </Target>
+
+</Project>
