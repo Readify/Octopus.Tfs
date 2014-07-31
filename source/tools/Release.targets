@@ -9,7 +9,7 @@
 
     <PropertyGroup>
       <NuGetToolsPath>$(SolutionDir).nuget</NuGetToolsPath>
-      <SolutionRestoreCommand>"$(NugetToolsPath)\nuget.exe" restore $(SolutionDir)$(SolutionName).sln</SolutionRestoreCommand>
+      <SolutionRestoreCommand>"$(NugetToolsPath)\nuget.exe" restore "$(SolutionDir)$(SolutionName).sln"</SolutionRestoreCommand>
     </PropertyGroup>
 
     <Exec Command="$(SolutionRestoreCommand)" />
