@@ -31,7 +31,7 @@
     <!-- Get a list of all the Octo.exe's in the packages folder and filter it down to the last one. -->
 
     <ItemGroup>
-      <AllOctopusToolsPaths Include="packages\OctopusTools*\Octo.exe" />
+      <AllOctopusToolsPaths Include="packages\Octopus*\tools\Octo.exe" />
     </ItemGroup>
     <PropertyGroup>
       <OctopusToolsPath></OctopusToolsPath>
