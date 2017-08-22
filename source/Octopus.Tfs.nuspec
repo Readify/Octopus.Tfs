@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>Octopus.Tfs</id>
-    <version>0.1</version>
+    <version>0.0.1-rc3</version>
     <authors>ducas</authors>
     <owners>ducas</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
